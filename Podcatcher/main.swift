@@ -8,5 +8,9 @@
 
 import Foundation
 
-print("Hello, World!")
+// Command line arguments will specify podcast feed and save location (default to current location).
+
+// Set up a queue so we can control the amount of concurrent downloads.
+
+// Create a download operation for each file.
 
