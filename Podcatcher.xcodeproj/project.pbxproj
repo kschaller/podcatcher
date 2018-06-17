@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		26269AA920D63F7F00976866 /* ConsoleIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26269AA820D63F7F00976866 /* ConsoleIO.swift */; };
+		26269AAB20D640C700976866 /* Podcatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26269AAA20D640C700976866 /* Podcatcher.swift */; };
 		2650F38120B8C571008A9A2B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F38020B8C571008A9A2B /* main.swift */; };
 		2650F38820B8C668008A9A2B /* DownloadOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F38720B8C668008A9A2B /* DownloadOperation.swift */; };
+		2650F39520B8CF09008A9A2B /* AsynchronousOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -24,9 +27,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		26269AA820D63F7F00976866 /* ConsoleIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleIO.swift; sourceTree = "<group>"; };
+		26269AAA20D640C700976866 /* Podcatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Podcatcher.swift; sourceTree = "<group>"; };
 		2650F37D20B8C571008A9A2B /* Podcatcher */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Podcatcher; sourceTree = BUILT_PRODUCTS_DIR; };
 		2650F38020B8C571008A9A2B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2650F38720B8C668008A9A2B /* DownloadOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadOperation.swift; sourceTree = "<group>"; };
+		2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsynchronousOperation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,8 +65,11 @@
 		2650F37F20B8C571008A9A2B /* Podcatcher */ = {
 			isa = PBXGroup;
 			children = (
-				2650F38020B8C571008A9A2B /* main.swift */,
+				2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */,
+				26269AA820D63F7F00976866 /* ConsoleIO.swift */,
 				2650F38720B8C668008A9A2B /* DownloadOperation.swift */,
+				2650F38020B8C571008A9A2B /* main.swift */,
+				26269AAA20D640C700976866 /* Podcatcher.swift */,
 			);
 			path = Podcatcher;
 			sourceTree = "<group>";
@@ -123,7 +132,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				2650F38120B8C571008A9A2B /* main.swift in Sources */,
+				26269AA920D63F7F00976866 /* ConsoleIO.swift in Sources */,
 				2650F38820B8C668008A9A2B /* DownloadOperation.swift in Sources */,
+				2650F39520B8CF09008A9A2B /* AsynchronousOperation.swift in Sources */,
+				26269AAB20D640C700976866 /* Podcatcher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

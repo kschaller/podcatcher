@@ -9,7 +9,7 @@
 import Foundation
 
 class DownloadOperation: Operation {
-    
+
     
     
 }
