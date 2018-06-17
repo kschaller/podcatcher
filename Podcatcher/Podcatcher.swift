@@ -11,9 +11,24 @@ import Foundation
 class Podcatcher {
     
     let consoleIO = ConsoleIO()
+    var parser: Parser?
     
     func staticMode() {
-        consoleIO.printUsage()
+//        consoleIO.printUsage()
+        guard let url = URL(string: CommandLine.arguments[1]) else {
+            consoleIO.writeMessage("Unable to read URL", to: .error)
+            return
+        }
+        parser = Parser(url: url)
+        parser?.delegate = self
+    }
+    
+}
+
+extension Podcatcher: ParserDelegate {
+    
+    func finishedParsing(episodes: [Episode]) {
+        // Load the episodes into a download queue.
     }
     
 }

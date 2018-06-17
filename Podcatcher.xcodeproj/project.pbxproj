@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		26269AA920D63F7F00976866 /* ConsoleIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26269AA820D63F7F00976866 /* ConsoleIO.swift */; };
 		26269AAB20D640C700976866 /* Podcatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26269AAA20D640C700976866 /* Podcatcher.swift */; };
+		26269AAD20D6459E00976866 /* Parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26269AAC20D6459E00976866 /* Parser.swift */; };
+		26269AAF20D6489200976866 /* Episode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26269AAE20D6489200976866 /* Episode.swift */; };
 		2650F38120B8C571008A9A2B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F38020B8C571008A9A2B /* main.swift */; };
 		2650F38820B8C668008A9A2B /* DownloadOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F38720B8C668008A9A2B /* DownloadOperation.swift */; };
 		2650F39520B8CF09008A9A2B /* AsynchronousOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */; };
@@ -29,6 +31,8 @@
 /* Begin PBXFileReference section */
 		26269AA820D63F7F00976866 /* ConsoleIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleIO.swift; sourceTree = "<group>"; };
 		26269AAA20D640C700976866 /* Podcatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Podcatcher.swift; sourceTree = "<group>"; };
+		26269AAC20D6459E00976866 /* Parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Parser.swift; sourceTree = "<group>"; };
+		26269AAE20D6489200976866 /* Episode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Episode.swift; sourceTree = "<group>"; };
 		2650F37D20B8C571008A9A2B /* Podcatcher */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Podcatcher; sourceTree = BUILT_PRODUCTS_DIR; };
 		2650F38020B8C571008A9A2B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2650F38720B8C668008A9A2B /* DownloadOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadOperation.swift; sourceTree = "<group>"; };
@@ -70,6 +74,8 @@
 				2650F38720B8C668008A9A2B /* DownloadOperation.swift */,
 				2650F38020B8C571008A9A2B /* main.swift */,
 				26269AAA20D640C700976866 /* Podcatcher.swift */,
+				26269AAC20D6459E00976866 /* Parser.swift */,
+				26269AAE20D6489200976866 /* Episode.swift */,
 			);
 			path = Podcatcher;
 			sourceTree = "<group>";
@@ -133,6 +139,8 @@
 			files = (
 				2650F38120B8C571008A9A2B /* main.swift in Sources */,
 				26269AA920D63F7F00976866 /* ConsoleIO.swift in Sources */,
+				26269AAF20D6489200976866 /* Episode.swift in Sources */,
+				26269AAD20D6459E00976866 /* Parser.swift in Sources */,
 				2650F38820B8C668008A9A2B /* DownloadOperation.swift in Sources */,
 				2650F39520B8CF09008A9A2B /* AsynchronousOperation.swift in Sources */,
 				26269AAB20D640C700976866 /* Podcatcher.swift in Sources */,
