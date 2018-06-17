@@ -20,8 +20,15 @@ class Parser: NSObject {
     private var episodes = [Episode]()
     private var currentTitle: String?
     private var currentURL: URL?
+    private var currentDate: Date?
     private var foundCharacters: String?
     private var inItem: Bool = false
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
+        return formatter
+    }()
     
     init?(url: URL) {
         if let parser = XMLParser(contentsOf: url) {
@@ -73,8 +80,8 @@ extension Parser: XMLParserDelegate {
                 // We've reached the end of an episode, so if we have all of the
                 // data we need, initialize the struct and append it to the episode
                 // array.
-                if let title = currentTitle, let url = currentURL {
-                    let episode = Episode(title: title, url: url)
+                if let title = currentTitle, let url = currentURL, let date = currentDate {
+                    let episode = Episode(title: title, url: url, date: date)
                     episodes.append(episode)
                 }
                 
@@ -85,6 +92,9 @@ extension Parser: XMLParserDelegate {
             case .title:
                 currentTitle = foundCharacters
             case .date:
+                if let foundCharacters = foundCharacters {
+                    currentDate = dateFormatter.date(from: foundCharacters)
+                }
                 break
             case .enclosure:
                 break
