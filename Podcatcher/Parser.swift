@@ -81,7 +81,7 @@ extension Parser: XMLParserDelegate {
                 // data we need, initialize the struct and append it to the episode
                 // array.
                 if let title = currentTitle, let url = currentURL, let date = currentDate {
-                    let episode = Episode(title: title, url: url, date: date)
+                    let episode = Episode(title: title, url: url, date: date, fileExtension: url.pathExtension)
                     episodes.append(episode)
                 }
                 
