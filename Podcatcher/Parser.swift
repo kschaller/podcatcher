@@ -28,10 +28,13 @@ class Parser: NSObject {
             self.parser = parser
             super.init()
             self.parser.delegate = self
-            self.parser.parse()
         } else {
             return nil
         }
+    }
+    
+    func parse() {
+        parser.parse()
     }
     
 }

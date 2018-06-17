@@ -21,6 +21,7 @@ class Podcatcher {
         }
         parser = Parser(url: url)
         parser?.delegate = self
+        parser?.parse()
     }
     
 }
