@@ -74,11 +74,11 @@
 				2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */,
 				26269AA820D63F7F00976866 /* ConsoleIO.swift */,
 				2650F38720B8C668008A9A2B /* DownloadOperation.swift */,
-				2650F38020B8C571008A9A2B /* main.swift */,
-				26269AAA20D640C700976866 /* Podcatcher.swift */,
-				26269AAC20D6459E00976866 /* Parser.swift */,
-				26269AAE20D6489200976866 /* Episode.swift */,
 				26269AB020D64DAB00976866 /* Element.swift */,
+				26269AAE20D6489200976866 /* Episode.swift */,
+				2650F38020B8C571008A9A2B /* main.swift */,
+				26269AAC20D6459E00976866 /* Parser.swift */,
+				26269AAA20D640C700976866 /* Podcatcher.swift */,
 			);
 			path = Podcatcher;
 			sourceTree = "<group>";
