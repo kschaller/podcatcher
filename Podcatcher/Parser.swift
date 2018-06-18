@@ -90,7 +90,7 @@ extension Parser: XMLParserDelegate {
                 currentURL = nil
                 inItem = false
             case .title:
-                currentTitle = foundCharacters
+                currentTitle = foundCharacters?.trimmingCharacters(in: .whitespacesAndNewlines)
             case .date:
                 if let foundCharacters = foundCharacters {
                     currentDate = dateFormatter.date(from: foundCharacters)
