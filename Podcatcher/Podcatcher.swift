@@ -43,7 +43,9 @@ class Podcatcher {
     
     fileprivate func outputURL(for episode: Episode) -> URL? {
         let dateString = outputDateFormatter.string(from: episode.date)
-        let filename = "\(dateString)_\(episode.title).\(episode.fileExtension)"
+        // https://stackoverflow.com/questions/36064907/swift-using-slash-in-filename-with-createdirectoryatpath
+        let encodedTitle = episode.title.replacingOccurrences(of: "/", with: ":")
+        let filename = "\(dateString)_\(encodedTitle).\(episode.fileExtension)"
         return outputURL?.appendingPathComponent(filename)
     }
     
