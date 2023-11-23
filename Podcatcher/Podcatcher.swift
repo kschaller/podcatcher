@@ -25,6 +25,7 @@ class Podcatcher {
     
     private var parser: Parser?
     private var outputURL: URL?
+    private var notBeforeDate: Date?
     private var downloadCount: (new: Int, skipped: Int) = (0, 0)
 
     func staticMode() {
@@ -35,6 +36,11 @@ class Podcatcher {
         }
         
         outputURL = URL(fileURLWithPath: CommandLine.arguments[2]) // TODO: Add some checking so we don't get OOB error
+        
+        if CommandLine.arguments.indices.contains(3) {
+            let dateString = CommandLine.arguments[3]
+            self.notBeforeDate = outputDateFormatter.date(from: dateString)
+        }
         
         parser = Parser(url: url)
         parser?.delegate = self
@@ -54,13 +60,15 @@ class Podcatcher {
 extension Podcatcher: ParserDelegate {
     
     func finishedParsing(episodes: [Episode]) {
+        let notBeforeDate = self.notBeforeDate ?? Date.distantPast
+        
         // Load the episodes into a download queue.
         for episode in episodes {
             guard let outputURL = outputURL(for: episode) else {
                 continue
             }
-            
-            if FileManager.default.fileExists(atPath: outputURL.path) == false {
+
+            if FileManager.default.fileExists(atPath: outputURL.path) == false && notBeforeDate < episode.date {
                 let operation = DownloadOperation(episode: episode)
                 operation.delegate = self
                 downloadQueue.addOperation(operation)
@@ -69,7 +77,7 @@ extension Podcatcher: ParserDelegate {
             }
         }
         downloadQueue.waitUntilAllOperationsAreFinished()
-        consoleIO.writeMessage("Done! Downloaded \(downloadCount.new) new episodes and skipped \(downloadCount.skipped) that had already been saved.")
+        consoleIO.writeMessage("Done! Downloaded \(downloadCount.new) new episodes and skipped \(downloadCount.skipped).")
     }
     
 }
