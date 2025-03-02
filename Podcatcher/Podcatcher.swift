@@ -57,33 +57,98 @@ actor Podcatcher {
         let notBeforeDate = self.notBeforeDate ?? Date.distantPast
         let fileManager = FileManager.default
         
-        // Use Swift concurrency with TaskGroup for parallel downloads
-        await withTaskGroup(of: Void.self) { group in
-            for episode in episodes {
-                guard let destinationURL = outputURL(for: episode) else {
-                    continue
+        // Create a list of episodes to download
+        var downloadQueue: [(episode: Episode, destination: URL)] = []
+        
+        // Filter episodes that need downloading
+        for episode in episodes {
+            guard let destinationURL = outputURL(for: episode) else {
+                continue
+            }
+            
+            if !fileManager.fileExists(atPath: destinationURL.path) && notBeforeDate < episode.date {
+                downloadQueue.append((episode: episode, destination: destinationURL))
+            } else {
+                // Count skipped episodes
+                await downloadManager.incrementSkippedCount()
+            }
+        }
+        
+        // Create a TaskGroup with a token-based approach for limiting concurrency
+        if downloadQueue.isEmpty {
+            // No episodes to download
+            return
+        }
+        
+        // Create a semaphore-like actor for limiting concurrency
+        actor DownloadTokens {
+            private var availableTokens: Int
+            private var waitingTasks: [(CheckedContinuation<Void, Never>)] = []
+            
+            init(tokens: Int) {
+                self.availableTokens = tokens
+            }
+            
+            func acquireToken() async {
+                if availableTokens > 0 {
+                    availableTokens -= 1
+                    return
                 }
                 
-                if !fileManager.fileExists(atPath: destinationURL.path) && notBeforeDate < episode.date {
-                    // Add each download as a child task
-                    group.addTask {
-                        await self.downloadAndSaveEpisode(episode, to: destinationURL)
-                    }
+                await withCheckedContinuation { continuation in
+                    waitingTasks.append(continuation)
+                }
+            }
+            
+            func releaseToken() async {
+                if let nextTask = waitingTasks.first {
+                    waitingTasks.removeFirst()
+                    nextTask.resume()
                 } else {
-                    // Count skipped episodes
-                    Task {
-                        await self.downloadManager.incrementSkippedCount()
+                    availableTokens += 1
+                }
+            }
+        }
+        
+        let tokens = DownloadTokens(tokens: 3)
+        
+        // Process all downloads with a concurrent limit
+        await withTaskGroup(of: Void.self) { group in
+            // Start a dispatcher task that manages the download queue
+            for download in downloadQueue {
+                group.addTask {
+                    // Acquire token before starting download (blocks if no tokens available)
+                    await tokens.acquireToken()
+                    
+                    // Perform download
+                    await self.downloadAndSaveEpisode(download.episode, to: download.destination)
+                    
+                    // Release token when done (regardless of success or failure)
+                    do {
+                        try await Task.sleep(for: .milliseconds(10)) // Small delay to avoid potential race conditions
+                        await tokens.releaseToken()
+                    } catch {
+                        // Ensure token is released even if sleep is cancelled
+                        await tokens.releaseToken()
                     }
                 }
             }
             
-            // Wait for all child tasks to complete
+            // Wait for all downloads to complete
             await group.waitForAll()
         }
         
         // Report final counts
         let counts = await downloadManager.downloadCount
         consoleIO.writeMessage("Done! Downloaded \(counts.new) new episodes and skipped \(counts.skipped).")
+    }
+    
+    // Helper method to adjust active downloads count and start new downloads
+    private func adjustActiveDownloads(_ activeDownloads: inout Int, group: TaskGroup<Void>) async {
+        // This method is deliberately limited to just decrementing the count
+        // TaskGroup doesn't allow adding new tasks from within a child task in Swift's structured concurrency
+        // The parent context will handle starting new downloads when this task completes
+        activeDownloads -= 1
     }
     
     private func downloadAndSaveEpisode(_ episode: Episode, to destinationURL: URL) async {
