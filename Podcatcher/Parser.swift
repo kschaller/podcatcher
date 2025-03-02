@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol ParserDelegate: class {
+protocol ParserDelegate: AnyObject {
     func finishedParsing(episodes: [Episode])
 }
 
@@ -42,6 +42,34 @@ class Parser: NSObject {
     
     func parse() {
         parser.parse()
+    }
+    
+    // New async parse method that returns episodes directly
+    func parseAsync() async -> [Episode] {
+        return await withCheckedContinuation { (continuation: CheckedContinuation<[Episode], Never>) in
+            // Use a strong reference to prevent immediate deallocation
+            let asyncDelegate = AsyncParserDelegate { episodes in
+                continuation.resume(returning: episodes)
+            }
+            self.delegate = asyncDelegate
+            
+            // Parse with the delegate retained
+            parser.parse()
+        }
+    }
+}
+
+// Helper class to bridge XMLParser callbacks to async/await
+private class AsyncParserDelegate: NSObject, ParserDelegate {
+    private let completion: ([Episode]) -> Void
+    
+    init(completion: @escaping ([Episode]) -> Void) {
+        self.completion = completion
+        super.init()
+    }
+    
+    func finishedParsing(episodes: [Episode]) {
+        completion(episodes)
     }
     
 }

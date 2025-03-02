@@ -8,33 +8,25 @@
 
 import Foundation
 
-protocol DownloadOperationDelegate: class {
+protocol DownloadDelegate: AnyObject {
     func didFinishDownloading(episode: Episode, temporaryURL: URL)
 }
 
-class DownloadOperation: AsynchronousOperation {
-
-    weak var delegate: DownloadOperationDelegate?
+// Using actor for thread safety with shared mutable state
+actor DownloadManager {
+    private(set) var downloadCount: (new: Int, skipped: Int) = (0, 0)
+    weak var delegate: DownloadDelegate?
     
-    private let episode: Episode
-    private let semaphore = DispatchSemaphore(value: 0)
-    
-    init(episode: Episode) {
-        self.episode = episode
+    func incrementNewCount() {
+        downloadCount.new += 1
     }
     
-    override func main() {
-        super.main()
-        
+    func incrementSkippedCount() {
+        downloadCount.skipped += 1
+    }
+    
+    func download(episode: Episode) async throws -> URL {
         print(episode.url)
-        let task = URLSession.shared.downloadTask(with: episode.url) { (fileURL, response, error) in
-            guard let fileURL = fileURL else { return }
-            self.delegate?.didFinishDownloading(episode: self.episode, temporaryURL: fileURL)
-            self.semaphore.signal()
-            self.state = .finished
-        }
-        task.resume()
-        semaphore.wait()
+        return try await URLSession.shared.download(from: episode.url).0
     }
-    
 }

@@ -8,28 +8,21 @@
 
 import Foundation
 
-class Podcatcher {
+actor Podcatcher {
     
     private let consoleIO = ConsoleIO()
-    private let downloadQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.qualityOfService = .utility
-        queue.maxConcurrentOperationCount = 3
-        return queue
-    }()
+    private let downloadManager = DownloadManager()
     private let outputDateFormatter: DateFormatter = {
-       let formatter = DateFormatter()
+        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
     
-    private var parser: Parser?
     private var outputURL: URL?
     private var notBeforeDate: Date?
-    private var downloadCount: (new: Int, skipped: Int) = (0, 0)
-
-    func staticMode() {
-//        consoleIO.printUsage()
+    
+    // Make this async to use structured concurrency
+    func staticMode() async {
         guard let url = URL(string: CommandLine.arguments[1]) else {
             consoleIO.writeMessage("Unable to read URL", to: .error)
             return
@@ -42,12 +35,17 @@ class Podcatcher {
             self.notBeforeDate = outputDateFormatter.date(from: dateString)
         }
         
-        parser = Parser(url: url)
-        parser?.delegate = self
-        parser?.parse()
+        guard let parser = Parser(url: url) else {
+            consoleIO.writeMessage("Failed to initialize parser", to: .error)
+            return
+        }
+        
+        // Use the new async parse method
+        let episodes = await parser.parseAsync()
+        await processEpisodes(episodes)
     }
     
-    fileprivate func outputURL(for episode: Episode) -> URL? {
+    private func outputURL(for episode: Episode) -> URL? {
         let dateString = outputDateFormatter.string(from: episode.date)
         // https://stackoverflow.com/questions/36064907/swift-using-slash-in-filename-with-createdirectoryatpath
         let encodedTitle = episode.title.replacingOccurrences(of: "/", with: ":")
@@ -55,44 +53,49 @@ class Podcatcher {
         return outputURL?.appendingPathComponent(filename)
     }
     
-}
-
-extension Podcatcher: ParserDelegate {
-    
-    func finishedParsing(episodes: [Episode]) {
+    private func processEpisodes(_ episodes: [Episode]) async {
         let notBeforeDate = self.notBeforeDate ?? Date.distantPast
+        let fileManager = FileManager.default
         
-        // Load the episodes into a download queue.
-        for episode in episodes {
-            guard let outputURL = outputURL(for: episode) else {
-                continue
+        // Use Swift concurrency with TaskGroup for parallel downloads
+        await withTaskGroup(of: Void.self) { group in
+            for episode in episodes {
+                guard let destinationURL = outputURL(for: episode) else {
+                    continue
+                }
+                
+                if !fileManager.fileExists(atPath: destinationURL.path) && notBeforeDate < episode.date {
+                    // Add each download as a child task
+                    group.addTask {
+                        await self.downloadAndSaveEpisode(episode, to: destinationURL)
+                    }
+                } else {
+                    // Count skipped episodes
+                    Task {
+                        await self.downloadManager.incrementSkippedCount()
+                    }
+                }
             }
-
-            if FileManager.default.fileExists(atPath: outputURL.path) == false && notBeforeDate < episode.date {
-                let operation = DownloadOperation(episode: episode)
-                operation.delegate = self
-                downloadQueue.addOperation(operation)
-            } else {
-                downloadCount.skipped += 1
-            }
+            
+            // Wait for all child tasks to complete
+            await group.waitForAll()
         }
-        downloadQueue.waitUntilAllOperationsAreFinished()
-        consoleIO.writeMessage("Done! Downloaded \(downloadCount.new) new episodes and skipped \(downloadCount.skipped).")
+        
+        // Report final counts
+        let counts = await downloadManager.downloadCount
+        consoleIO.writeMessage("Done! Downloaded \(counts.new) new episodes and skipped \(counts.skipped).")
     }
     
-}
-
-extension Podcatcher: DownloadOperationDelegate {
-    
-    func didFinishDownloading(episode: Episode, temporaryURL: URL) {
-        guard let outputFileURL = outputURL(for: episode) else { return }
-
+    private func downloadAndSaveEpisode(_ episode: Episode, to destinationURL: URL) async {
         do {
-            try FileManager.default.copyItem(at: temporaryURL, to: outputFileURL)
-            downloadCount.new += 1
-        } catch(let error) {
-            print("Error writing to \(outputFileURL.absoluteString): \(error.localizedDescription)")
+            // Download the episode
+            let temporaryURL = try await downloadManager.download(episode: episode)
+            
+            // Save to final destination
+            try FileManager.default.copyItem(at: temporaryURL, to: destinationURL)
+            await downloadManager.incrementNewCount()
+        } catch {
+            consoleIO.writeMessage("Error downloading \(episode.title): \(error.localizedDescription)", to: .error)
         }
     }
-    
 }
