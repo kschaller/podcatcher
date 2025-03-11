@@ -15,6 +15,7 @@
 		2650F38120B8C571008A9A2B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F38020B8C571008A9A2B /* main.swift */; };
 		2650F38820B8C668008A9A2B /* DownloadOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F38720B8C668008A9A2B /* DownloadOperation.swift */; };
 		2650F39520B8CF09008A9A2B /* AsynchronousOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */; };
+		2A6A9A0B2D743F3C007056CE /* ProgressBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A6A9A0A2D743F3C007056CE /* ProgressBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,6 +40,7 @@
 		2650F38020B8C571008A9A2B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2650F38720B8C668008A9A2B /* DownloadOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadOperation.swift; sourceTree = "<group>"; };
 		2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsynchronousOperation.swift; sourceTree = "<group>"; };
+		2A6A9A0A2D743F3C007056CE /* ProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressBar.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +73,7 @@
 		2650F37F20B8C571008A9A2B /* Podcatcher */ = {
 			isa = PBXGroup;
 			children = (
+				2A6A9A0A2D743F3C007056CE /* ProgressBar.swift */,
 				2650F39420B8CF09008A9A2B /* AsynchronousOperation.swift */,
 				26269AA820D63F7F00976866 /* ConsoleIO.swift */,
 				2650F38720B8C668008A9A2B /* DownloadOperation.swift */,
@@ -146,6 +149,7 @@
 				26269AA920D63F7F00976866 /* ConsoleIO.swift in Sources */,
 				26269AB120D64DAB00976866 /* Element.swift in Sources */,
 				26269AAF20D6489200976866 /* Episode.swift in Sources */,
+				2A6A9A0B2D743F3C007056CE /* ProgressBar.swift in Sources */,
 				26269AAD20D6459E00976866 /* Parser.swift in Sources */,
 				2650F38820B8C668008A9A2B /* DownloadOperation.swift in Sources */,
 				2650F39520B8CF09008A9A2B /* AsynchronousOperation.swift in Sources */,

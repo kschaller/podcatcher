@@ -8,7 +8,7 @@
 
 import Foundation
 
-actor Podcatcher {
+actor Podcatcher: DownloadProgressReporter {
     
     private let consoleIO = ConsoleIO()
     private let downloadManager = DownloadManager()
@@ -40,8 +40,14 @@ actor Podcatcher {
             return
         }
         
-        // Use the new async parse method
+        // Set up download manager with progress reporter
+        await downloadManager.setProgressReporter(self)
+        
+        // Parse feed
+        consoleIO.writeMessage("Parsing feed...")
         let episodes = await parser.parseAsync()
+        
+        // Download episodes
         await processEpisodes(episodes)
     }
     
@@ -162,5 +168,40 @@ actor Podcatcher {
         } catch {
             consoleIO.writeMessage("Error downloading \(episode.title): \(error.localizedDescription)", to: .error)
         }
+    }
+    
+    // MARK: - DownloadProgressReporter Implementation
+    
+    func reportProgress(for episode: Episode, bytesReceived: Int64, totalBytes: Int64) async {
+        // Skip if we don't have valid total bytes
+        guard totalBytes > 0 else { return }
+        
+        // Calculate progress percentage
+        let progress = Double(bytesReceived) / Double(totalBytes)
+        
+        // Format title to keep it short
+        let title = episode.title.count > 30 ? episode.title.prefix(27) + "..." : episode.title
+        
+        // Using a temporary progress bar for each update
+        
+        // Create and update progress bar
+        let bar = ProgressBar(title: String(title))
+        bar.update(progress: progress)
+    }
+    
+    func downloadStarted(episode: Episode) async {
+        // Prepare for a new download progress display
+        let title = episode.title.count > 30 ? episode.title.prefix(27) + "..." : episode.title
+        
+        // Create a new progress bar and show initial state
+        let bar = ProgressBar(title: String(title))
+        bar.update(progress: 0)
+    }
+    
+    func downloadFinished(episode: Episode) async {
+        // Clear the progress bar when download is completed
+        let title = episode.title.count > 30 ? episode.title.prefix(27) + "..." : episode.title
+        let bar = ProgressBar(title: String(title))
+        bar.clear()
     }
 }
