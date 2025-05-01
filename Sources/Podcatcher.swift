@@ -8,45 +8,72 @@
 
 import Foundation
 
-class Podcatcher {
+actor Podcatcher {
 
     internal var feedURL: URL?
     internal var outputURL: URL?
     internal var notBeforeDate: Date?
 
     private let consoleIO = ConsoleIO()
-    private let downloadQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.qualityOfService = .utility
-        queue.maxConcurrentOperationCount = 3
-        return queue
-    }()
     private let outputDateFormatter: DateFormatter = {
        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
-    
-    private var parser: Parser?
-    private var downloadCount: (new: Int, skipped: Int) = (0, 0)
 
-    func staticMode() {
-//        consoleIO.printUsage()
-        guard let url = URL(string: CommandLine.arguments[1]) else {
-            consoleIO.writeMessage("Unable to read URL", to: .error)
-            return
+    private actor DownloadManager {
+        private(set) var newCount = 0
+        private(set) var skippedCount = 0
+        
+        func incrementNew() {
+            newCount += 1
         }
         
-        outputURL = URL(fileURLWithPath: CommandLine.arguments[2]) // TODO: Add some checking so we don't get OOB error
-        
-        if CommandLine.arguments.indices.contains(3) {
-            let dateString = CommandLine.arguments[3]
-            self.notBeforeDate = outputDateFormatter.date(from: dateString)
+        func incrementSkipped() {
+            skippedCount += 1
         }
         
-        parser = Parser(url: url)
-        parser?.delegate = self
-        parser?.parse()
+        func counts() -> (new: Int, skipped: Int) {
+            return (newCount, skippedCount)
+        }
+    }
+    
+    private let downloadManager = DownloadManager()
+
+    func run(feedURL: URL, outputDir: URL, since: Date) async throws {
+        self.outputURL = outputDir
+        self.notBeforeDate = since
+        
+        let parser = Parser(url: feedURL)
+        let episodes = try await parser.parse()
+        
+        await downloadEpisodes(episodes)
+    }
+    
+    private func downloadEpisodes(_ episodes: [Episode]) async {
+        let notBefore = notBeforeDate ?? .distantPast
+        
+        await withTaskGroup { group in
+            for episode in episodes {
+                group.addTask { [weak self] in
+                    guard episode.date > notBefore, let outputURL = await self?.outputURL(for: episode) else {
+                        await self?.downloadManager.incrementSkipped()
+                        return
+                    }
+                    
+                    do {
+                        let (localURL, _) = try await URLSession.shared.download(from: episode.url)
+                        try FileManager.default.copyItem(at: localURL, to: outputURL)
+                        await self?.downloadManager.incrementNew()
+                    } catch {
+                        await self?.downloadManager.incrementSkipped()
+                    }
+                }
+            }
+        }
+        
+        let counts = await downloadManager.counts()
+        consoleIO.writeMessage("Done! Downloaded \(counts.new) new episodes and skipped \(counts.skipped).")
     }
     
     fileprivate func outputURL(for episode: Episode) -> URL? {
@@ -55,46 +82,6 @@ class Podcatcher {
         let encodedTitle = episode.title.replacingOccurrences(of: "/", with: ":")
         let filename = "\(dateString)_\(encodedTitle).\(episode.fileExtension)"
         return outputURL?.appendingPathComponent(filename)
-    }
-    
-}
-
-extension Podcatcher: ParserDelegate {
-    
-    func finishedParsing(episodes: [Episode]) {
-        let notBeforeDate = self.notBeforeDate ?? Date.distantPast
-        
-        // Load the episodes into a download queue.
-        for episode in episodes {
-            guard let outputURL = outputURL(for: episode) else {
-                continue
-            }
-
-            if FileManager.default.fileExists(atPath: outputURL.path) == false && notBeforeDate < episode.date {
-                let operation = DownloadOperation(episode: episode)
-                operation.delegate = self
-                downloadQueue.addOperation(operation)
-            } else {
-                downloadCount.skipped += 1
-            }
-        }
-        downloadQueue.waitUntilAllOperationsAreFinished()
-        consoleIO.writeMessage("Done! Downloaded \(downloadCount.new) new episodes and skipped \(downloadCount.skipped).")
-    }
-    
-}
-
-extension Podcatcher: DownloadOperationDelegate {
-    
-    func didFinishDownloading(episode: Episode, temporaryURL: URL) {
-        guard let outputFileURL = outputURL(for: episode) else { return }
-
-        do {
-            try FileManager.default.copyItem(at: temporaryURL, to: outputFileURL)
-            downloadCount.new += 1
-        } catch(let error) {
-            print("Error writing to \(outputFileURL.absoluteString): \(error.localizedDescription)")
-        }
     }
     
 }

@@ -36,13 +36,11 @@ struct PodcatcherCLI: AsyncParsableCommand {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let sinceDate = since.flatMap { formatter.date(from: $0) } ?? .distantPast
+
+        let outputURL = URL(filePath: outputDir)
         
         let podcatcher = Podcatcher()
-        podcatcher.feedURL = url
-        podcatcher.outputURL = URL(fileURLWithPath: outputDir)
-        podcatcher.notBeforeDate = sinceDate
-        
-        await podcatcher.staticMode()
+        try await podcatcher.run(feedURL: url, outputDir: outputURL, since: sinceDate)
     }
     
 }

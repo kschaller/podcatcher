@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "Podcatcher",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v13)
     ],
     products: [
         .executable(name: "podcatcher", targets: ["Podcatcher"])
