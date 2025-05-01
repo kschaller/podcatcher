@@ -9,7 +9,11 @@
 import Foundation
 
 class Podcatcher {
-    
+
+    internal var feedURL: URL?
+    internal var outputURL: URL?
+    internal var notBeforeDate: Date?
+
     private let consoleIO = ConsoleIO()
     private let downloadQueue: OperationQueue = {
         let queue = OperationQueue()
@@ -24,8 +28,6 @@ class Podcatcher {
     }()
     
     private var parser: Parser?
-    private var outputURL: URL?
-    private var notBeforeDate: Date?
     private var downloadCount: (new: Int, skipped: Int) = (0, 0)
 
     func staticMode() {
