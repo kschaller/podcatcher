@@ -1,87 +1,46 @@
 //
-//  Podcatcher.swift
+//  main.swift
 //  Podcatcher
 //
-//  Created by Kai Schaller on 6/17/18.
+//  Created by Kai Schaller on 5/25/18.
 //  Copyright © 2018 Kai Schaller. All rights reserved.
 //
 
 import Foundation
+import ArgumentParser
 
-actor Podcatcher {
-
-    internal var feedURL: URL?
-    internal var outputURL: URL?
-    internal var notBeforeDate: Date?
-
-    private let consoleIO = ConsoleIO()
-    private let outputDateFormatter: DateFormatter = {
-       let formatter = DateFormatter()
+@main
+struct Podcatcher: AsyncParsableCommand {
+    
+    static let configuration = CommandConfiguration(
+        commandName: "podcatcher",
+        abstract: "A command-line tool for archiving podcast episodes."
+    )
+    
+    @Option(name: .shortAndLong, help: "Feed URL to fetch.")
+    var feedURL: String
+    
+    @Option(name: .shortAndLong, help: "Output directory for downloaded files.")
+    var outputDir: String
+    
+    @Option(name: .shortAndLong, help: "Only download episodes since this date (yyyy-MM-dd).")
+    var since: String?
+    
+    func run() async throws {
+        // Validate the feed URL.
+        guard let url = URL(string: feedURL) else {
+            throw ValidationError("Invalid feed URL: \(feedURL)")
+        }
+        
+        // Parse optional "since" date.
+        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
+        let sinceDate = since.flatMap { formatter.date(from: $0) } ?? .distantPast
 
-    private actor DownloadManager {
-        private(set) var newCount = 0
-        private(set) var skippedCount = 0
+        let outputURL = URL(filePath: outputDir)
         
-        func incrementNew() {
-            newCount += 1
-        }
-        
-        func incrementSkipped() {
-            skippedCount += 1
-        }
-        
-        func counts() -> (new: Int, skipped: Int) {
-            return (newCount, skippedCount)
-        }
-    }
-    
-    private let downloadManager = DownloadManager()
-
-    func run(feedURL: URL, outputDir: URL, since: Date) async throws {
-        self.outputURL = outputDir
-        self.notBeforeDate = since
-        
-        let parser = Parser(url: feedURL)
-        let episodes = try await parser.parse()
-        
-        await downloadEpisodes(episodes)
-    }
-    
-    private func downloadEpisodes(_ episodes: [Episode]) async {
-        let notBefore = notBeforeDate ?? .distantPast
-        
-        await withTaskGroup { group in
-            for episode in episodes {
-                group.addTask { [weak self] in
-                    guard episode.date > notBefore, let outputURL = await self?.outputURL(for: episode) else {
-                        await self?.downloadManager.incrementSkipped()
-                        return
-                    }
-                    
-                    do {
-                        let (localURL, _) = try await URLSession.shared.download(from: episode.url)
-                        try FileManager.default.copyItem(at: localURL, to: outputURL)
-                        await self?.downloadManager.incrementNew()
-                    } catch {
-                        await self?.downloadManager.incrementSkipped()
-                    }
-                }
-            }
-        }
-        
-        let counts = await downloadManager.counts()
-        consoleIO.writeMessage("Done! Downloaded \(counts.new) new episodes and skipped \(counts.skipped).")
-    }
-    
-    fileprivate func outputURL(for episode: Episode) -> URL? {
-        let dateString = outputDateFormatter.string(from: episode.date)
-        // https://stackoverflow.com/questions/36064907/swift-using-slash-in-filename-with-createdirectoryatpath
-        let encodedTitle = episode.title.replacingOccurrences(of: "/", with: ":")
-        let filename = "\(dateString)_\(encodedTitle).\(episode.fileExtension)"
-        return outputURL?.appendingPathComponent(filename)
+        let downloader = Downloader()
+        try await downloader.run(feedURL: url, outputDir: outputURL, since: sinceDate)
     }
     
 }

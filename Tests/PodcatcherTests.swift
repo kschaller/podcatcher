@@ -23,8 +23,8 @@ final class PodcatcherTests: XCTestCase {
         try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
 
         // Call `run`.
-        let podcatcher = Podcatcher()
-        try await podcatcher.run(feedURL: feedURL, outputDir: outputDir, since: .distantPast)
+        let downloader = Downloader()
+        try await downloader.run(feedURL: feedURL, outputDir: outputDir, since: .distantPast)
 
         // Verify no files were written.
         let files = try FileManager.default.contentsOfDirectory(atPath: outputDir.path)
@@ -37,9 +37,9 @@ final class PodcatcherTests: XCTestCase {
         let outputDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
 
-        let podcatcher = Podcatcher()
+        let downloader = Downloader()
         do {
-            try await podcatcher.run(feedURL: invalidFeed, outputDir: outputDir, since: .distantPast)
+            try await downloader.run(feedURL: invalidFeed, outputDir: outputDir, since: .distantPast)
             XCTFail("Expected run() to throw for invalid feed URL")
         } catch {
             // Success: an error should be thrown

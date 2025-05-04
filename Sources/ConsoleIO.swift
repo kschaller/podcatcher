@@ -15,12 +15,6 @@ enum OutputType {
 
 class ConsoleIO {
     
-    func printUsage() {
-        let name = (CommandLine.arguments.first! as NSString).lastPathComponent
-        writeMessage("usage:")
-        writeMessage("\(name) [feed url] [output path]")
-    }
-    
     func writeMessage(_ message: String, to: OutputType = .standard) {
         switch to {
         case .standard:
