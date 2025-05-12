@@ -9,79 +9,84 @@
 import Foundation
 
 actor Downloader {
-
-    internal var feedURL: URL?
-    internal var outputURL: URL?
-    internal var notBeforeDate: Date?
-
+    
     private let consoleIO = ConsoleIO()
     private let outputDateFormatter: DateFormatter = {
-       let formatter = DateFormatter()
+        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
-
-    private actor DownloadManager {
-        private(set) var newCount = 0
-        private(set) var skippedCount = 0
-        
-        func incrementNew() {
-            newCount += 1
-        }
-        
-        func incrementSkipped() {
-            skippedCount += 1
-        }
-        
-        func counts() -> (new: Int, skipped: Int) {
-            return (newCount, skippedCount)
-        }
+    
+    private enum DownloadResult {
+        case downloaded
+        case skipped
+        case failed(Error)
     }
     
-    private let downloadManager = DownloadManager()
-
-    func run(feedURL: URL, outputDir: URL, since: Date) async throws {
-        self.outputURL = outputDir
-        self.notBeforeDate = since
-        
+    func run(feedURL: URL, outputDir: URL, concurrentDownloads: Int, since: Date) async throws {
         let parser = Parser(url: feedURL)
         let episodes = try await parser.parse()
-        
-        await downloadEpisodes(episodes)
+        await downloadEpisodes(episodes, outputDir: outputDir, concurrentDownloads: concurrentDownloads, since: since)
     }
     
-    private func downloadEpisodes(_ episodes: [Episode]) async {
-        let notBefore = notBeforeDate ?? .distantPast
+    private func downloadEpisodes(_ episodes: [Episode], outputDir: URL, concurrentDownloads: Int, since: Date) async {
+        var downloadedCount: Int = 0
+        var skippedCount: Int = 0
+        var errorCount: Int = 0
         
-        await withTaskGroup { group in
+        await withTaskGroup(of: DownloadResult.self) { group in
             for episode in episodes {
-                group.addTask { [weak self] in
-                    guard episode.date > notBefore, let outputURL = await self?.outputURL(for: episode) else {
-                        await self?.downloadManager.incrementSkipped()
-                        return
-                    }
-                    
-                    do {
-                        let (localURL, _) = try await URLSession.shared.download(from: episode.url)
-                        try FileManager.default.copyItem(at: localURL, to: outputURL)
-                        await self?.downloadManager.incrementNew()
-                    } catch {
-                        await self?.downloadManager.incrementSkipped()
-                    }
+                group.addTask {
+                    await self.downloadEpisode(episode, outputDir: outputDir, since: since)
+                }
+            }
+            
+            for await result in group {
+                switch result {
+                case .downloaded:
+                    downloadedCount += 1
+                case .skipped:
+                    skippedCount += 1
+                case .failed(let error):
+                    errorCount += 1
+                    print("Error: \(error)")
                 }
             }
         }
         
-        let counts = await downloadManager.counts()
-        consoleIO.writeMessage("Done! Downloaded \(counts.new) new episodes and skipped \(counts.skipped).")
+        consoleIO.writeMessage("Done! Downloaded \(downloadedCount) new episodes and skipped \(skippedCount).")
     }
     
-    fileprivate func outputURL(for episode: Episode) -> URL? {
+    private func downloadEpisode(_ episode: Episode, outputDir: URL, since: Date) async -> DownloadResult {
+        guard episode.date > since else {
+            return .skipped
+        }
+
+        let outputURL = self.outputURL(for: episode, outputDir: outputDir)
+        
+        guard fileExists(outputURL) == false else {
+            return .skipped
+        }
+        
+        do {
+            let (tempURL, _) = try await URLSession.shared.download(from: episode.url)
+            try FileManager.default.copyItem(at: tempURL, to: outputURL)
+            return .downloaded
+        } catch {
+            return .failed(error)
+        }
+    }
+    
+    private func fileExists(_ url: URL) -> Bool {
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+    
+    private func outputURL(for episode: Episode, outputDir: URL) -> URL {
         let dateString = outputDateFormatter.string(from: episode.date)
         // https://stackoverflow.com/questions/36064907/swift-using-slash-in-filename-with-createdirectoryatpath
         let encodedTitle = episode.title.replacingOccurrences(of: "/", with: ":")
         let filename = "\(dateString)_\(encodedTitle).\(episode.fileExtension)"
-        return outputURL?.appendingPathComponent(filename)
+        return outputDir.appendingPathComponent(filename)
     }
     
 }

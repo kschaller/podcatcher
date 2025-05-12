@@ -24,7 +24,7 @@ final class PodcatcherTests: XCTestCase {
 
         // Call `run`.
         let downloader = Downloader()
-        try await downloader.run(feedURL: feedURL, outputDir: outputDir, since: .distantPast)
+        try await downloader.run(feedURL: feedURL, outputDir: outputDir, concurrentDownloads: 3, since: .distantPast)
 
         // Verify no files were written.
         let files = try FileManager.default.contentsOfDirectory(atPath: outputDir.path)
@@ -39,7 +39,7 @@ final class PodcatcherTests: XCTestCase {
 
         let downloader = Downloader()
         do {
-            try await downloader.run(feedURL: invalidFeed, outputDir: outputDir, since: .distantPast)
+            try await downloader.run(feedURL: invalidFeed, outputDir: outputDir, concurrentDownloads: 3, since: .distantPast)
             XCTFail("Expected run() to throw for invalid feed URL")
         } catch {
             // Success: an error should be thrown

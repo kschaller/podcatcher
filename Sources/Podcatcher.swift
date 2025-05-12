@@ -23,6 +23,9 @@ struct Podcatcher: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Output directory for downloaded files.")
     var outputDir: String
     
+    @Option(name: .shortAndLong, help: "Maximum number of concurrent downloads.")
+    var concurrentDownloads: Int = 3
+    
     @Option(name: .shortAndLong, help: "Only download episodes since this date (yyyy-MM-dd).")
     var since: String?
     
@@ -40,7 +43,7 @@ struct Podcatcher: AsyncParsableCommand {
         let outputURL = URL(filePath: outputDir)
         
         let downloader = Downloader()
-        try await downloader.run(feedURL: url, outputDir: outputURL, since: sinceDate)
+        try await downloader.run(feedURL: url, outputDir: outputURL, concurrentDownloads: concurrentDownloads, since: sinceDate)
     }
     
 }
