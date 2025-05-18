@@ -17,10 +17,10 @@ actor Downloader {
         return formatter
     }()
     
-    private enum DownloadResult {
+    private enum DownloadResult: Sendable {
         case downloaded
         case skipped
-        case failed(Error)
+        case failed(String)
     }
     
     func run(feedURL: URL, outputDir: URL, concurrentDownloads: Int, since: Date) async throws {
@@ -35,21 +35,32 @@ actor Downloader {
         var errorCount: Int = 0
         
         await withTaskGroup(of: DownloadResult.self) { group in
-            for episode in episodes {
-                group.addTask {
-                    await self.downloadEpisode(episode, outputDir: outputDir, since: since)
+            let maxDownloads: Int = min(concurrentDownloads, episodes.count)
+            for i in 0..<maxDownloads {
+                let capturedIndex = i
+                group.addTask { @Sendable in
+                    await self.downloadEpisode(episodes[capturedIndex], outputDir: outputDir, since: since)
                 }
             }
             
+            var nextIndex = maxDownloads
             for await result in group {
+                if nextIndex < episodes.count {
+                    let capturedIndex = nextIndex
+                    group.addTask { @Sendable in
+                        await self.downloadEpisode(episodes[capturedIndex], outputDir: outputDir, since: since)
+                    }
+                    nextIndex += 1
+                }
+                
                 switch result {
                 case .downloaded:
                     downloadedCount += 1
                 case .skipped:
                     skippedCount += 1
-                case .failed(let error):
+                case .failed(let errorString):
                     errorCount += 1
-                    print("Error: \(error)")
+                    print("Error: \(errorString)")
                 }
             }
         }
@@ -68,12 +79,14 @@ actor Downloader {
             return .skipped
         }
         
+        consoleIO.writeMessage("\(outputFilename(for: episode))")
+        
         do {
             let (tempURL, _) = try await URLSession.shared.download(from: episode.url)
             try FileManager.default.copyItem(at: tempURL, to: outputURL)
             return .downloaded
         } catch {
-            return .failed(error)
+            return .failed(error.localizedDescription)
         }
     }
     
@@ -82,11 +95,15 @@ actor Downloader {
     }
     
     private func outputURL(for episode: Episode, outputDir: URL) -> URL {
+        let filename = outputFilename(for: episode)
+        return outputDir.appendingPathComponent(filename)
+    }
+    
+    private func outputFilename(for episode: Episode) -> String {
         let dateString = outputDateFormatter.string(from: episode.date)
         // https://stackoverflow.com/questions/36064907/swift-using-slash-in-filename-with-createdirectoryatpath
         let encodedTitle = episode.title.replacingOccurrences(of: "/", with: ":")
-        let filename = "\(dateString)_\(encodedTitle).\(episode.fileExtension)"
-        return outputDir.appendingPathComponent(filename)
+        return "\(dateString)_\(encodedTitle).\(episode.fileExtension)"
     }
     
 }
