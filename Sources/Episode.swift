@@ -8,11 +8,9 @@
 
 import Foundation
 
-struct Episode {
-    
+struct Episode: Sendable {
     let title: String
     let url: URL
     let date: Date
     let fileExtension: String
-    
 }
