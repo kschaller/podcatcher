@@ -73,14 +73,34 @@ actor ProgressManager {
         progressBar.state = success ? .completed : .failed
         
         progressBars[id] = progressBar
+        
+        // Immediately log the completion above the progress bars
+        logCompletedDownload(progressBar: progressBar)
     }
     
-    /// Removes a progress bar after a delay
-    func removeProgressBar(id: String, afterDelay delay: TimeInterval = 2.0) {
-        Task {
-            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            progressBars.removeValue(forKey: id)
+    /// Logs a completed download above the progress bars
+    private func logCompletedDownload(progressBar: ProgressBar) {
+        // Clear current progress display temporarily
+        if renderedLineCount > 0 {
+            for _ in 0..<renderedLineCount {
+                print(TerminalControl.cursorUp(1), terminator: "")
+                print(TerminalControl.clearLine, terminator: "")
+            }
+            print("\r", terminator: "")
         }
+        
+        // Print the completion message
+        let icon = progressBar.state == .completed ? "✅" : "❌"
+        let action = progressBar.state == .completed ? "Downloaded" : "Failed"
+        print("\(icon) \(action): \(progressBar.title)")
+        
+        // Reset line count since we've cleared the progress area
+        renderedLineCount = 0
+    }
+    
+    /// Removes a progress bar immediately (used after logging completion)
+    func removeProgressBar(id: String) {
+        progressBars.removeValue(forKey: id)
     }
     
     private var renderedLineCount = 0
@@ -95,7 +115,10 @@ actor ProgressManager {
     }
     
     private func renderProgressBars() {
-        let activeBars = Array(progressBars.values.prefix(maxConcurrentDownloads))
+        // Only show bars for downloads that are in progress (not completed/failed)
+        let activeBars = Array(progressBars.values
+            .filter { $0.state == .waiting || $0.state == .downloading }
+            .prefix(maxConcurrentDownloads))
         
         // Clear previously rendered lines
         if renderedLineCount > 0 {

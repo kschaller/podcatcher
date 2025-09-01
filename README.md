@@ -62,6 +62,12 @@ Download with progress bars:
 podcatcher "https://example.com/podcast/rss" ~/Downloads/Podcasts/ --show-progress
 ```
 
+The progress bar mode provides:
+- Real-time progress bars for active downloads
+- Persistent completion log above progress bars
+- Visual indicators: ⏳ waiting, ⬇️ downloading, ✅ completed, ❌ failed
+- File size tracking and download speeds
+
 ## File Organization
 
 Episodes are saved with the following naming convention:

@@ -134,7 +134,8 @@ actor Podcatcher {
             
             if showProgress {
                 await progressManager?.completeDownload(id: episodeId, success: success)
-                await progressManager?.removeProgressBar(id: episodeId, afterDelay: 1.0)
+                // Remove immediately after logging completion
+                await progressManager?.removeProgressBar(id: episodeId)
             } else {
                 let status = success ? "✓" : "✗"
                 let message = success ? "Downloaded" : "Failed to download"
@@ -146,7 +147,8 @@ actor Podcatcher {
         } catch {
             if showProgress {
                 await progressManager?.completeDownload(id: episodeId, success: false)
-                await progressManager?.removeProgressBar(id: episodeId, afterDelay: 1.0)
+                // Remove immediately after logging completion
+                await progressManager?.removeProgressBar(id: episodeId)
             } else {
                 print("✗ Failed to download: \(episode.title)")
             }
