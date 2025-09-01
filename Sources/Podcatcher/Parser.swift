@@ -1,23 +1,54 @@
-//
-//  Parser.swift
-//  Podcatcher
-//
-//  Created by Kai Schaller on 6/17/18.
-//  Copyright © 2018 Kai Schaller. All rights reserved.
-//
-
 import Foundation
 
-protocol ParserDelegate: class {
-    func finishedParsing(episodes: [Episode])
+enum ParserError: Error, LocalizedError {
+    case invalidURL
+    case parseFailure(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid RSS URL"
+        case .parseFailure(let message):
+            return "Failed to parse RSS feed: \(message)"
+        }
+    }
 }
 
 class Parser: NSObject {
     
-    weak var delegate: ParserDelegate?
+    func parseEpisodes(from url: URL) async throws -> [Episode] {
+        return try await withCheckedThrowingContinuation { continuation in
+            parseEpisodesWithCompletion(from: url) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
     
-    private let parser: XMLParser
-    private var episodes = [Episode]()
+    private func parseEpisodesWithCompletion(from url: URL, completion: @escaping (Result<[Episode], Error>) -> Void) {
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                
+                let parser = XMLParser(data: data)
+                let delegate = ParserDelegate()
+                parser.delegate = delegate
+                
+                if parser.parse() {
+                    completion(.success(delegate.episodes))
+                } else if let error = parser.parserError {
+                    completion(.failure(ParserError.parseFailure(error.localizedDescription)))
+                } else {
+                    completion(.failure(ParserError.parseFailure("Unknown parsing error")))
+                }
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+}
+
+private class ParserDelegate: NSObject, XMLParserDelegate {
+    var episodes = [Episode]()
     private var currentTitle: String?
     private var currentURL: URL?
     private var currentDate: Date?
@@ -29,24 +60,6 @@ class Parser: NSObject {
         formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss Z"
         return formatter
     }()
-    
-    init?(url: URL) {
-        if let parser = XMLParser(contentsOf: url) {
-            self.parser = parser
-            super.init()
-            self.parser.delegate = self
-        } else {
-            return nil
-        }
-    }
-    
-    func parse() {
-        parser.parse()
-    }
-    
-}
-
-extension Parser: XMLParserDelegate {
     
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
         
@@ -68,7 +81,7 @@ extension Parser: XMLParserDelegate {
     
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         var characters = foundCharacters ?? ""
-        let sanitizedString = String(string.filter { "\n\t\r".contains($0) == false })
+        let sanitizedString = String(string.filter { !"\n\t\r".contains($0) })
         characters += sanitizedString
         self.foundCharacters = characters
     }
@@ -77,17 +90,14 @@ extension Parser: XMLParserDelegate {
         if let element = Element(rawValue: elementName), inItem {
             switch element {
             case .item:
-                // We've reached the end of an episode, so if we have all of the
-                // data we need, initialize the struct and append it to the episode
-                // array.
                 if let title = currentTitle, let url = currentURL, let date = currentDate {
                     let episode = Episode(title: title, url: url, date: date, fileExtension: url.pathExtension)
                     episodes.append(episode)
                 }
                 
-                // Reset the values for the next episode.
                 currentTitle = nil
                 currentURL = nil
+                currentDate = nil
                 inItem = false
             case .title:
                 currentTitle = foundCharacters?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,7 +105,6 @@ extension Parser: XMLParserDelegate {
                 if let foundCharacters = foundCharacters {
                     currentDate = dateFormatter.date(from: foundCharacters)
                 }
-                break
             case .enclosure:
                 break
             }
@@ -103,10 +112,4 @@ extension Parser: XMLParserDelegate {
         
         foundCharacters = nil
     }
-    
-    func parserDidEndDocument(_ parser: XMLParser) {
-        // All done parsing the XML, so pass back the data via the delegate.
-        delegate?.finishedParsing(episodes: episodes)
-    }
-    
 }

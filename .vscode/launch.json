@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:podcatcher}",
+            "name": "Debug podcatcher",
+            "program": "${workspaceFolder:podcatcher}/.build/debug/podcatcher",
+            "preLaunchTask": "swift: Build Debug podcatcher"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:podcatcher}",
+            "name": "Release podcatcher",
+            "program": "${workspaceFolder:podcatcher}/.build/release/podcatcher",
+            "preLaunchTask": "swift: Build Release podcatcher"
+        }
+    ]
+}
