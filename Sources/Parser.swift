@@ -8,15 +8,20 @@
 
 import Foundation
 
+protocol ParserProtocol {
+    init(url: URL)
+    func parse() async throws -> [Episode]
+}
+
 enum ParserError: Error {
     case failedToParse
 }
 
-class Parser {
+class Parser: ParserProtocol {
     
     private let feedURL: URL
 
-    init(url: URL) {
+    required init(url: URL) {
         self.feedURL = url
     }
     

@@ -37,6 +37,7 @@ actor ProgressRenderer {
     
     /// Redraw all the lines in place using ANSI escape sequences.
     private func redraw() {
+        return;
         // Move the cursor up, if needed.
         if hasDrawn {
             print("\u{001B}[\(lastDrawnCount)A", terminator: "")
