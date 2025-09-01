@@ -7,9 +7,13 @@ actor Podcatcher {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+    private let progressManager: ProgressManager?
+    private let showProgress: Bool
     
-    init(maxConcurrentDownloads: Int = 3) {
+    init(maxConcurrentDownloads: Int = 3, showProgress: Bool = false) {
         self.maxConcurrentDownloads = maxConcurrentDownloads
+        self.showProgress = showProgress
+        self.progressManager = showProgress ? ProgressManager(maxConcurrentDownloads: maxConcurrentDownloads) : nil
     }
     
     func downloadPodcast(
@@ -34,10 +38,20 @@ actor Podcatcher {
         print("Will download \(toDownload.count) new episodes, skipping \(skipped) existing/old episodes")
         
         if !toDownload.isEmpty {
+            if showProgress {
+                await progressManager?.startDisplay()
+            }
+            
             let downloadedCount = await downloadEpisodes(
                 toDownload,
                 to: outputDirectory
             )
+            
+            if showProgress {
+                // Wait a moment to show final results
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await progressManager?.stopDisplay()
+            }
             
             print("Done! Downloaded \(downloadedCount) new episodes and skipped \(skipped).")
         } else {
@@ -94,30 +108,133 @@ actor Podcatcher {
     
     private func downloadEpisode(_ episode: Episode, to outputDirectory: URL) async -> Bool {
         let outputURL = outputURL(for: episode, in: outputDirectory)
+        let episodeId = episode.id.uuidString
+        
+        // Add progress bar for this episode
+        if showProgress {
+            await progressManager?.addProgressBar(id: episodeId, title: episode.title)
+        } else {
+            print("Downloading: \(episode.title)")
+        }
         
         do {
-            print("Downloading: \(episode.title)")
-            
-            let (tempURL, _) = try await URLSession.shared.download(from: episode.url)
-            
+            // Create directory if needed
             try FileManager.default.createDirectory(
                 at: outputDirectory,
                 withIntermediateDirectories: true,
                 attributes: nil
             )
             
-            if FileManager.default.fileExists(atPath: outputURL.path) {
-                try FileManager.default.removeItem(at: outputURL)
+            // Use custom URLSession with progress tracking
+            let success = await downloadWithProgress(
+                from: episode.url,
+                to: outputURL,
+                episodeId: episodeId
+            )
+            
+            if showProgress {
+                await progressManager?.completeDownload(id: episodeId, success: success)
+                await progressManager?.removeProgressBar(id: episodeId, afterDelay: 1.0)
+            } else {
+                let status = success ? "✓" : "✗"
+                let message = success ? "Downloaded" : "Failed to download"
+                print("\(status) \(message): \(episode.title)")
             }
             
-            try FileManager.default.moveItem(at: tempURL, to: outputURL)
+            return success
             
-            print("✓ Downloaded: \(outputURL.lastPathComponent)")
+        } catch {
+            if showProgress {
+                await progressManager?.completeDownload(id: episodeId, success: false)
+                await progressManager?.removeProgressBar(id: episodeId, afterDelay: 1.0)
+            } else {
+                print("✗ Failed to download: \(episode.title)")
+            }
+            return false
+        }
+    }
+    
+    private func downloadWithProgress(
+        from url: URL,
+        to destinationURL: URL,
+        episodeId: String
+    ) async -> Bool {
+        if showProgress {
+            return await downloadWithProgressTracking(from: url, to: destinationURL, episodeId: episodeId)
+        } else {
+            return await downloadSimple(from: url, to: destinationURL)
+        }
+    }
+    
+    private func downloadSimple(from url: URL, to destinationURL: URL) async -> Bool {
+        do {
+            let (tempURL, _) = try await URLSession.shared.download(from: url)
+            
+            // Remove existing file if present
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            
+            // Move downloaded file to final location
+            try FileManager.default.moveItem(at: tempURL, to: destinationURL)
             return true
             
         } catch {
-            print("✗ Failed to download \(episode.title): \(error.localizedDescription)")
             return false
+        }
+    }
+    
+    private func downloadWithProgressTracking(from url: URL, to destinationURL: URL, episodeId: String) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            let session = URLSession.shared
+            let task = session.downloadTask(with: url) { tempURL, response, error in
+                if let error = error {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                guard let tempURL = tempURL else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                do {
+                    // Remove existing file if present
+                    if FileManager.default.fileExists(atPath: destinationURL.path) {
+                        try FileManager.default.removeItem(at: destinationURL)
+                    }
+                    
+                    // Move downloaded file to final location
+                    try FileManager.default.moveItem(at: tempURL, to: destinationURL)
+                    continuation.resume(returning: true)
+                } catch {
+                    continuation.resume(returning: false)
+                }
+            }
+            
+            // Set up progress observation
+            let observation = task.progress.observe(\.fractionCompleted, options: [.new]) { progress, change in
+                Task {
+                    await self.progressManager?.updateProgress(
+                        id: episodeId,
+                        progress: progress.fractionCompleted,
+                        downloadedBytes: progress.completedUnitCount,
+                        totalBytes: progress.totalUnitCount,
+                        state: .downloading
+                    )
+                }
+            }
+            
+            // Start download
+            task.resume()
+            
+            // Clean up when task completes
+            Task {
+                while task.state == .running || task.state == .suspended {
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                }
+                observation.invalidate()
+            }
         }
     }
     

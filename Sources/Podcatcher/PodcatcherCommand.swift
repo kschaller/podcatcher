@@ -20,6 +20,9 @@ struct PodcatcherCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Maximum number of concurrent downloads")
     var maxConcurrentDownloads: Int = 3
     
+    @Flag(help: "Show progress bars for downloads")
+    var showProgress: Bool = false
+    
     func run() async throws {
         guard let url = URL(string: rssURL) else {
             throw ValidationError("Invalid RSS URL: \(rssURL)")
@@ -33,7 +36,8 @@ struct PodcatcherCommand: AsyncParsableCommand {
         let notBefore: Date? = notBeforeDate.flatMap { dateFormatter.date(from: $0) }
         
         let podcatcher = Podcatcher(
-            maxConcurrentDownloads: maxConcurrentDownloads
+            maxConcurrentDownloads: maxConcurrentDownloads,
+            showProgress: showProgress
         )
         
         try await podcatcher.downloadPodcast(

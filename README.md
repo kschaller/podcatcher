@@ -37,6 +37,7 @@ podcatcher <rss-url> <output-directory> [options]
 
 - `--not-before-date <date>`: Only download episodes published on or after this date (YYYY-MM-DD format)
 - `-m, --max-concurrent-downloads <count>`: Maximum number of concurrent downloads (default: 3)
+- `--show-progress`: Show ASCII progress bars for concurrent downloads
 - `--help`: Show help information
 
 ### Examples
@@ -54,6 +55,11 @@ podcatcher "https://example.com/podcast/rss" ~/Downloads/Podcasts/ --not-before-
 Download with custom concurrency:
 ```bash
 podcatcher "https://example.com/podcast/rss" ~/Downloads/Podcasts/ -m 5
+```
+
+Download with progress bars:
+```bash
+podcatcher "https://example.com/podcast/rss" ~/Downloads/Podcasts/ --show-progress
 ```
 
 ## File Organization
