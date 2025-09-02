@@ -3,7 +3,8 @@
     "allow": [
       "Bash(cp:*)",
       "Bash(swift build)",
-      "Bash(swift test)"
+      "Bash(swift test)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
